@@ -1,5 +1,9 @@
 from app import app
+from app.forms import ContactForm
 from flask import render_template, request, redirect, url_for, flash
+from app import mail
+from flask_mail import Message
+
 
 
 ###
@@ -11,11 +15,42 @@ def home():
     """Render website's home page."""
     return render_template('home.html')
 
-
 @app.route('/about/')
 def about():
     """Render the website's about page."""
-    return render_template('about.html', name="Mary Jane")
+    return render_template('about.html', name="Ashleigh Palmer")
+
+
+@app.route('/contact/', methods=['GET', 'POST'])
+def contact():
+    """Render the website's contact page."""
+
+    form = ContactForm(request.form)
+
+    if request.method == "POST" and form.validate_on_submit():
+        # Retrieve form data
+        name = form.name.data
+        email = form.email.data
+        subject = form.subject.data
+        message = form.message.data
+
+        # Send email
+        msg = Message(subject, sender=(name, email),
+                    recipients=["ashleigh.palmer@gmail.com"])
+        msg.body = message
+        mail.send(msg)
+
+        # Flash success message and redirect to home page
+        flash("Form successfully submitted!", "success")
+        return redirect(url_for('home'))
+
+    # Display errors if form is not submitted correctly
+    if form.errors:
+        flash("Please fill out all fields appropriately.")
+        flash_errors(form)
+
+    return render_template('contact.html', form=form)
+
 
 
 ###
@@ -56,3 +91,13 @@ def add_header(response):
 def page_not_found(error):
     """Custom 404 page."""
     return render_template('404.html'), 404
+
+@app.route('/submit', methods=['GET', 'POST'])
+def submit():
+    form = ContactForm()
+    if form.validate_on_submit():
+        return redirect('/success')
+    return render_template('submit.html', form=form)
+
+if __name__ == '__main__':
+    app.run(debug=True, host="0.0.0.0", port="8080")
